@@ -76,20 +76,26 @@ app.post('/api/jobs', async (req, res) => {
     jobs[id].progress = 50;
 
     // --- render simple video (black bg) ---
-    const videoPath = path.join('/tmp', `${id}.mp4`);
-    await new Promise((resolve, reject) => {
-      ffmpeg()
-        .input('color=c=black:s=1080x1920:d=10', { f: 'lavfi' }) // 10‑s black video
-        .input(audioPath)
-        .outputOptions('-shortest')
-        .output(videoPath)
-        .on('end', resolve)
-        .on('error', reject)
-        .run();
-    });
-    jobs[id].progress = 100;
-    jobs[id].status = 'completed';
-    jobs[id].url = `/downloads/${id}.mp4`;
+const videoPath = path.join('/tmp', `${id}.mp4`);
+await new Promise((resolve, reject) => {
+  ffmpeg()
+    // 1️⃣ add a synthetic colour clip
+    .input('color=c=black:s=1080x1920:d=10')
+    // 2️⃣ tell FFmpeg the *previous* input is a lavfi filter
+    .inputFormat('lavfi')
+
+    // 3️⃣ add your MP3 voice-over
+    .input(audioPath)
+
+    // finish when either stream ends
+    .outputOptions('-shortest')
+
+    .output(videoPath)
+    .on('start', cmd => console.log('FFmpeg command:', cmd)) // optional log
+    .on('end', resolve)
+    .on('error', reject)
+    .run();
+});
 
     // move to public folder
     const downloadsDir = path.join(__dirname, '..', 'web', 'downloads');
