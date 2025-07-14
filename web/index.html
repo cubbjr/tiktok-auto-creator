@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>TikTok Auto Creator</title>
+    <style>
+      body { font-family: sans-serif; max-width: 600px; margin: 40px auto; }
+      textarea { width: 100%; height: 120px; }
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <h1>TikTok Auto Creator</h1>
+    <textarea id="text" placeholder="Paste Reddit story or type text here"></textarea><br/>
+    <button id="createBtn">Create video!</button>
+
+    <h2>Jobs</h2>
+    <ul id="jobsList"></ul>
+
+    <script>
+      const btn = document.getElementById('createBtn');
+      const textArea = document.getElementById('text');
+      const jobsList = document.getElementById('jobsList');
+
+      btn.onclick = async () => {
+        const text = textArea.value.trim();
+        if (!text) { alert('Enter text first'); return; }
+        const res = await fetch('/api/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        const { id } = await res.json();
+        const li = document.createElement('li');
+        li.textContent = `Job ${id}: queued`;
+        jobsList.prepend(li);
+
+        const interval = setInterval(async () => {
+          const jr = await fetch('/api/jobs/' + id).then(r => r.json());
+          li.textContent = `Job ${id}: ${jr.status} (${jr.progress}%)`;
+          if (jr.status === 'completed') {
+            const link = document.createElement('a');
+            link.href = jr.url;
+            link.textContent = 'Download video';
+            li.append(' ', link);
+            clearInterval(interval);
+          }
+          if (jr.status === 'error') {
+            li.textContent += ' - ' + jr.error;
+            clearInterval(interval);
+          }
+        }, 3000);
+      };
+    </script>
+  </body>
+</html>
