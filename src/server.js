@@ -8,6 +8,14 @@ const fs = require('fs');
 const PORT = process.env.PORT || 10000;
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
+console.log(
+  'ELEVENLABS_API_KEY (first 8 chars):',
+  ELEVENLABS_API_KEY ? ELEVENLABS_API_KEY.slice(0, 8) + '…' : '(undefined)'
+);
+if (!ELEVENLABS_API_KEY) {
+  throw new Error('ELEVENLABS_API_KEY is not set in the container!');
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'web')));
