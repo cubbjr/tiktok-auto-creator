@@ -18,39 +18,64 @@
     <ul id="jobsList"></ul>
 
     <script>
-      const btn = document.getElementById('createBtn');
-      const textArea = document.getElementById('text');
-      const jobsList = document.getElementById('jobsList');
+  const btn  = document.getElementById('createBtn');
+  const ta   = document.getElementById('text');
+  const list = document.getElementById('jobsList');
 
-      btn.onclick = async () => {
-        const text = textArea.value.trim();
-        if (!text) { alert('Enter text first'); return; }
-        const res = await fetch('/api/jobs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text })
-        });
-        const { id } = await res.json();
-        const li = document.createElement('li');
-        li.textContent = `Job ${id}: queued`;
-        jobsList.prepend(li);
+  function short(id){ return id.slice(0,8)+'…'; }
 
-        const interval = setInterval(async () => {
-          const jr = await fetch('/api/jobs/' + id).then(r => r.json());
-          li.textContent = `Job ${id}: ${jr.status} (${jr.progress}%)`;
-          if (jr.status === 'completed') {
-            const link = document.createElement('a');
-            link.href = jr.url;
-            link.textContent = 'Download video';
-            li.append(' ', link);
-            clearInterval(interval);
-          }
-          if (jr.status === 'error') {
-            li.textContent += ' - ' + jr.error;
-            clearInterval(interval);
-          }
-        }, 3000);
-      };
-    </script>
+  btn.onclick = async () => {
+    const text = ta.value.trim();
+    if(!text){ alert('Enter text first'); return; }
+
+    btn.disabled = true;
+    const res = await fetch('/api/jobs',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text})
+    });
+    const {id} = await res.json();
+    ta.value = '';
+
+    // build list item
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <strong>${short(id)}</strong> —
+      <span class="st">queued</span>
+      <div class="bar"><div class="fill" style="width:0%"></div></div>
+    `;
+    list.prepend(li);
+
+    const st   = li.querySelector('.st');
+    const fill = li.querySelector('.fill');
+
+    // poll every second
+    const iv = setInterval(async ()=>{
+      const j = await fetch('/api/jobs/'+id).then(r=>r.json());
+      st.textContent = `${j.status} (${j.progress}%)`;
+      fill.style.width = j.progress+'%';
+
+      if(j.status==='completed'){
+        const a = document.createElement('a');
+        a.href  = j.url;
+        a.textContent = 'Download video';
+        li.append(' — ',a);
+        clearInterval(iv); btn.disabled = false;
+      }
+      if(j.status==='error'){
+        st.textContent += ' — '+j.error;
+        fill.style.background = '#f87171';
+        clearInterval(iv); btn.disabled = false;
+      }
+    },1000);
+  };
+</script>
+<style>
+  ul { list-style:none; padding:0 }
+  li { margin: 0.4rem 0; }
+  .bar{background:#e5e7eb;height:4px;margin-top:2px}
+  .fill{background:#4ade80;height:4px;width:0;transition:width .5s}
+</style>
+
   </body>
 </html>
