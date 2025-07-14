@@ -41,7 +41,7 @@ app.post('/api/jobs', async (req, res) => {
     if (!ELEVENLABS_API_KEY) {
       throw new Error('ELEVENLABS_API_KEY missing');
     }
-    const voiceId = '21m00Tcm4TlvDq8ikWAM'; // default voice
+    const voiceId = 'AZnzlk1XvdvUeBnXmlld';
     const ttsUrl = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
     const ttsResp = await axios.post(ttsUrl,
       { text, voice_settings: { stability: 0.3, similarity_boost: 0.3 } },
