@@ -79,19 +79,28 @@ app.post('/api/jobs', async (req, res) => {
 const videoPath = path.join('/tmp', `${id}.mp4`);
 await new Promise((resolve, reject) => {
   ffmpeg()
-    .input('color=black:size=1080x1920:duration=10')
-    .inputFormat('lavfi')          // ← tells FFmpeg the previous input is a filter
+    // synthetic 1080×1920 black video
+    .input('color=black:size=1080x1920:r=25')
+    .inputFormat('lavfi')
+
+    // voice-over track
     .input(audioPath)
-    .outputOptions('-shortest')
 
-    // new: stream FFmpeg’s own stderr into the Render logs
-    .on('stderr', line => console.log('FFmpeg:', line))
+    // ✅ stop after 10 s, make shortest stream win
+    .outputOptions([
+      '-t', '10',          // total duration
+      '-shortest',         // cut off sooner if audio is shorter
+      '-c:v', 'libx264',   // good default codec
+      '-pix_fmt', 'yuv420p'
+    ])
 
-    .on('start', cmd => console.log('FFmpeg cmd:', cmd)) // already there
-    .on('end', resolve)
-    .on('error', reject)
     .output(videoPath)
+    .on('start', cmd => console.log('FFmpeg cmd:', cmd))
+    .on('stderr', line => console.log('FFmpeg:', line))
+    .on('end', resolve)   // will now fire at exactly 10 s
+    .on('error', reject)
     .run();
+});
 });
 
     // move to public folder
