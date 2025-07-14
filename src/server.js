@@ -75,41 +75,32 @@ app.post('/api/jobs', async (req, res) => {
     fs.writeFileSync(audioPath, ttsResp.data);
     jobs[id].progress = 50;
 
-// --- render simple video (black bg) ---
-const videoPath = path.join('/tmp', `${id}.mp4`);
+    // --- render simple video (black bg) ---
+    const videoPath = path.join('/tmp', `${id}.mp4`);
 
-await new Promise((resolve, reject) => {
-  ffmpeg()
-    // 10-second black clip @25 fps, 1080 × 1920
-    .input('color=c=black:s=1080x1920:r=25:d=10')   // ← note **d=10**
-    .inputFormat('lavfi')
+    await new Promise((resolve, reject) => {
+      ffmpeg()
+        // synthetic 1080×1920, 25 fps, 10-second black clip
+        .input('color=black:size=1080x1920:r=25:d=10')
+        .inputFormat('lavfi')          // tells FFmpeg the previous input is a filter
 
-    // voice-over
-    .input(audioPath)
+        // voice-over audio
+        .input(audioPath)
 
-    // cut as soon as either stream ends (audio is ~2 s)
-    .outputOptions([
-      '-shortest',
-      '-c:v', 'libx264',
-      '-pix_fmt', 'yuv420p'
-    ])
-
-    .output(videoPath)
-    .on('start', cmd => console.log('FFmpeg cmd:', cmd))
-    .on('stderr', line => console.log('FFmpeg:', line))
-    .on('end', resolve)    // will fire after ~2 s now
-    .on('error', reject)
-    .run();
-});
-
-jobs[id].progress = 100;
-jobs[id].status   = 'completed';
-jobs[id].url      = `/downloads/${id}.mp4`;
+        // stop when either stream ends (audio is ~2 s)
+        .outputOptions([
+          '-shortest',
+          '-c:v', 'libx264',
+          '-pix_fmt', 'yuv420p'
+        ])
 
         .output(videoPath)
-        .on('start', cmd => console.log('FFmpeg cmd:', cmd))
+
+        // optional debug logs
+        .on('start',  cmd  => console.log('FFmpeg cmd:', cmd))
         .on('stderr', line => console.log('FFmpeg:', line))
-        .on('end', resolve)
+
+        .on('end',   resolve)
         .on('error', reject)
         .run();
     });
