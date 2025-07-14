@@ -75,25 +75,36 @@ app.post('/api/jobs', async (req, res) => {
     fs.writeFileSync(audioPath, ttsResp.data);
     jobs[id].progress = 50;
 
-        // --- render simple video (black bg) ---
-    const videoPath = path.join('/tmp', `${id}.mp4`);
+// --- render simple video (black bg) ---
+const videoPath = path.join('/tmp', `${id}.mp4`);
 
-    await new Promise((resolve, reject) => {
-      ffmpeg()
-        // 1️⃣ generate 10-second black 1080×1920 video @25 fps
-        .input('color=black:size=1080x1920:r=25')
-        .inputFormat('lavfi')
+await new Promise((resolve, reject) => {
+  ffmpeg()
+    // 10-second black clip @25 fps, 1080 × 1920
+    .input('color=c=black:s=1080x1920:r=25:d=10')   // ← note **d=10**
+    .inputFormat('lavfi')
 
-        // 2️⃣ voice-over audio
-        .input(audioPath)
+    // voice-over
+    .input(audioPath)
 
-        // 3️⃣ stop after 10 s OR when audio ends, whichever comes first
-        .outputOptions([
-          '-t', '10',
-          '-shortest',
-          '-c:v', 'libx264',
-          '-pix_fmt', 'yuv420p'
-        ])
+    // cut as soon as either stream ends (audio is ~2 s)
+    .outputOptions([
+      '-shortest',
+      '-c:v', 'libx264',
+      '-pix_fmt', 'yuv420p'
+    ])
+
+    .output(videoPath)
+    .on('start', cmd => console.log('FFmpeg cmd:', cmd))
+    .on('stderr', line => console.log('FFmpeg:', line))
+    .on('end', resolve)    // will fire after ~2 s now
+    .on('error', reject)
+    .run();
+});
+
+jobs[id].progress = 100;
+jobs[id].status   = 'completed';
+jobs[id].url      = `/downloads/${id}.mp4`;
 
         .output(videoPath)
         .on('start', cmd => console.log('FFmpeg cmd:', cmd))
