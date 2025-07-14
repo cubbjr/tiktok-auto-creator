@@ -8,6 +8,30 @@ const fs = require('fs');
 const PORT = process.env.PORT || 10000;
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
+// ---------- debug ELEVENLABS_API_KEY ----------
+const ELEVENLABS_API_KEY = (process.env.ELEVENLABS_API_KEY || '').trim();
+
+console.log('ELEVEN key literal:', JSON.stringify(ELEVENLABS_API_KEY));
+console.log('ELEVEN key length :', ELEVENLABS_API_KEY.length);
+
+// (optional) quick live-test – asks ElevenLabs for your voice list
+(async () => {
+  try {
+    const r = await require('axios').get(
+      'https://api.elevenlabs.io/v1/voices',
+      { headers: { 'xi-api-key': ELEVENLABS_API_KEY } }
+    );
+    console.log('Voice list status:', r.status);   // expect 200
+  } catch (e) {
+    console.error(
+      'Voice list failed:',
+      e.response?.status,
+      e.response?.data?.detail || e.message
+    );
+  }
+})();
+// ----------------------------------------------
+
 console.log(
   'ELEVENLABS_API_KEY (first 8 chars):',
   ELEVENLABS_API_KEY ? ELEVENLABS_API_KEY.slice(0, 8) + '…' : '(undefined)'
