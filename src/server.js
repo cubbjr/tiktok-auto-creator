@@ -79,7 +79,7 @@ app.post('/api/jobs', async (req, res) => {
     const videoPath = path.join('/tmp', `${id}.mp4`);
     await new Promise((resolve, reject) => {
       ffmpeg()
-        .input('color=c=black:s=1080x1920:d=10') // 10‑s black video
+        .input('color=c=black:s=1080x1920:d=10', { f: 'lavfi' }) // 10‑s black video
         .input(audioPath)
         .outputOptions('-shortest')
         .output(videoPath)
