@@ -6,18 +6,26 @@ const axios = require('axios');
 const fs = require('fs');
 
 const PORT = process.env.PORT || 10000;
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
-// ---------- debug ELEVENLABS_API_KEY ----------
+/* ────────────── ELEVENLABS key: read, trim, debug ────────────── */
 const ELEVENLABS_API_KEY = (process.env.ELEVENLABS_API_KEY || '').trim();
 
 console.log('ELEVEN key literal:', JSON.stringify(ELEVENLABS_API_KEY));
 console.log('ELEVEN key length :', ELEVENLABS_API_KEY.length);
+console.log(
+  'ELEVEN key first 8  :',
+  ELEVENLABS_API_KEY ? ELEVENLABS_API_KEY.slice(0, 8) + '…' : '(undefined)'
+);
 
-// (optional) quick live-test – asks ElevenLabs for your voice list
+if (!ELEVENLABS_API_KEY) {
+  throw new Error('ELEVENLABS_API_KEY is not set in the container!');
+}
+
+/* one-off live test – lists voices so you know the key is accepted.
+   Comment this whole IIFE out after troubleshooting. */
 (async () => {
   try {
-    const r = await require('axios').get(
+    const r = await axios.get(
       'https://api.elevenlabs.io/v1/voices',
       { headers: { 'xi-api-key': ELEVENLABS_API_KEY } }
     );
@@ -30,15 +38,7 @@ console.log('ELEVEN key length :', ELEVENLABS_API_KEY.length);
     );
   }
 })();
-// ----------------------------------------------
-
-console.log(
-  'ELEVENLABS_API_KEY (first 8 chars):',
-  ELEVENLABS_API_KEY ? ELEVENLABS_API_KEY.slice(0, 8) + '…' : '(undefined)'
-);
-if (!ELEVENLABS_API_KEY) {
-  throw new Error('ELEVENLABS_API_KEY is not set in the container!');
-}
+/* ─────────────────────────────────────────────────────────────── */
 
 const app = express();
 app.use(express.json());
