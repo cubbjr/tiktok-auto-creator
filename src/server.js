@@ -75,39 +75,44 @@ app.post('/api/jobs', async (req, res) => {
     fs.writeFileSync(audioPath, ttsResp.data);
     jobs[id].progress = 50;
 
-    // --- render simple video (black bg) ---
-const videoPath = path.join('/tmp', `${id}.mp4`);
-await new Promise((resolve, reject) => {
-  ffmpeg()
-    // synthetic 1080×1920 black video
-    .input('color=black:size=1080x1920:r=25')
-    .inputFormat('lavfi')
+        // --- render simple video (black bg) ---
+    const videoPath = path.join('/tmp', `${id}.mp4`);
 
-    // voice-over track
-    .input(audioPath)
+    await new Promise((resolve, reject) => {
+      ffmpeg()
+        // 1️⃣ generate 10-second black 1080×1920 video @25 fps
+        .input('color=black:size=1080x1920:r=25')
+        .inputFormat('lavfi')
 
-    // ✅ stop after 10 s, make shortest stream win
-    .outputOptions([
-      '-t', '10',          // total duration
-      '-shortest',         // cut off sooner if audio is shorter
-      '-c:v', 'libx264',   // good default codec
-      '-pix_fmt', 'yuv420p'
-    ])
+        // 2️⃣ voice-over audio
+        .input(audioPath)
 
-    .output(videoPath)
-    .on('start', cmd => console.log('FFmpeg cmd:', cmd))
-    .on('stderr', line => console.log('FFmpeg:', line))
-    .on('end', resolve)   // will now fire at exactly 10 s
-    .on('error', reject)
-    .run();
-});
-});
+        // 3️⃣ stop after 10 s OR when audio ends, whichever comes first
+        .outputOptions([
+          '-t', '10',
+          '-shortest',
+          '-c:v', 'libx264',
+          '-pix_fmt', 'yuv420p'
+        ])
+
+        .output(videoPath)
+        .on('start', cmd => console.log('FFmpeg cmd:', cmd))
+        .on('stderr', line => console.log('FFmpeg:', line))
+        .on('end', resolve)
+        .on('error', reject)
+        .run();
+    });
+
+    jobs[id].progress = 100;
+    jobs[id].status   = 'completed';
+    jobs[id].url      = `/downloads/${id}.mp4`;
 
     // move to public folder
     const downloadsDir = path.join(__dirname, '..', 'web', 'downloads');
     fs.mkdirSync(downloadsDir, { recursive: true });
     fs.copyFileSync(videoPath, path.join(downloadsDir, `${id}.mp4`));
-  } catch (err) {
+  }
+  catch (err) {
     console.error(err);
     jobs[id].status = 'error';
     jobs[id].error = err.message;
