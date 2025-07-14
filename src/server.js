@@ -79,21 +79,18 @@ app.post('/api/jobs', async (req, res) => {
 const videoPath = path.join('/tmp', `${id}.mp4`);
 await new Promise((resolve, reject) => {
   ffmpeg()
-    // 1️⃣ add a synthetic colour clip
-    .input('color=c=black:s=1080x1920:d=10')
-    // 2️⃣ tell FFmpeg the *previous* input is a lavfi filter
-    .inputFormat('lavfi')
-
-    // 3️⃣ add your MP3 voice-over
+    .input('color=black:size=1080x1920:duration=10')
+    .inputFormat('lavfi')          // ← tells FFmpeg the previous input is a filter
     .input(audioPath)
-
-    // finish when either stream ends
     .outputOptions('-shortest')
 
-    .output(videoPath)
-    .on('start', cmd => console.log('FFmpeg command:', cmd)) // optional log
+    // new: stream FFmpeg’s own stderr into the Render logs
+    .on('stderr', line => console.log('FFmpeg:', line))
+
+    .on('start', cmd => console.log('FFmpeg cmd:', cmd)) // already there
     .on('end', resolve)
     .on('error', reject)
+    .output(videoPath)
     .run();
 });
 
